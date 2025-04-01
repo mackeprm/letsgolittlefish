@@ -1,0 +1,9 @@
+# Lets go little fish Simulator
+
+A CLI to simulate game runs of the board game "Let's go little fish". CLI Options are
+
+	letsgolittlefish -fish_tiles 5 -boat_tiles 5 -n 10000
+
+fish_tiles: River tiles between open sea and fish starting point
+boat_tiles: River tiles between fish starting point starting point
+n: number of simulation runs.
