@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use clap::Parser;
 use rand::{Rng, rngs::ThreadRng};
 
-const WINNERS: [&str; 2] = ["fish", "fishers"];
+//TODO move to ints + constants
+const WINNERS: [&str; 3] = ["fish", "fishers", "tie"];
+//TODO move to ints + constants
 const DIE_SIDES: [&str; 6] = ["red", "green", "pink", "orange", "yellow", "blue"];
 
 #[derive(Parser)]
@@ -24,7 +26,6 @@ fn dice_roll(rng: &mut ThreadRng) -> &str {
     return DIE_SIDES[random_index];
 }
 
-
 struct Piece<'a> {
     position: u16,
     state: &'a str,
@@ -39,8 +40,10 @@ fn check_win_condition(boat: &Piece, fish: &[Piece]) -> bool {
 
 fn determine_winner<'a>(fish: &[Piece]) -> &'a str {
     let num_fish_escaped = fish.iter().filter(|&fish| fish.state == "free").count();
-    if num_fish_escaped >= 2 {
+    if num_fish_escaped > 2 {
         return WINNERS[0];
+    } else if num_fish_escaped == 2 {
+        return WINNERS[2];
     } else {
         return WINNERS[1];
     }
@@ -54,7 +57,6 @@ fn update_fish_state<'a>(fish: &'a mut Piece<'_>, boat: &Piece<'_>) {
         fish.state = "captured";
     }
 }
-
 
 fn run_game(cli: &Cli) -> &str {
     /*Game board setup:
@@ -117,17 +119,7 @@ fn run_game(cli: &Cli) -> &str {
             } else if selected_fish_state == "captured" {
                 boat.position -= 1
             } else if selected_fish_state == "free" {
-                // This is just one of many strategies we could use:
-                // Move the next active fish we found:
-                for current_fish in &mut fish {
-                    if current_fish.state == "active" {
-                        current_fish.position -= 1;
-                        break;
-                    }
-                }
-                // TODO other strategies
-                // Move the fish that's nearest the sea
-                // Move the fish that's farthest from the sea (but still active)
+                update_by_strategy(&mut fish);
             } else {
                 panic!("this is a terrible mistake");
             }
@@ -142,6 +134,52 @@ fn run_game(cli: &Cli) -> &str {
     return winner;
 }
 
+fn move_next_active_fish(fish: &mut [Piece<'_>; 4]) -> () {
+    // Move the next active fish we found:
+    for current_fish in fish {
+        if current_fish.state == "active" {
+            current_fish.position -= 1;
+            break;
+        }
+    }
+}
+
+// Find the active piece with the lowest position value
+fn move_fish_nearest_sea(fish: &mut [Piece<'_>; 4]) -> () {
+    let maybe_min_piece_index = fish
+        .iter()
+        .enumerate()
+        .filter(|(_, piece)| piece.state == "active")
+        .min_by_key(|(_, piece)| piece.position)
+        .map(|(index, _)| index);
+
+    if let Some(i) = maybe_min_piece_index {
+        fish[i].position -= 1;
+    }
+}
+
+fn move_fish_farthest_from_sea(fish: &mut [Piece<'_>; 4]) -> () {
+    let maybe_min_piece_index = fish
+        .iter()
+        .enumerate()
+        .filter(|(_, piece)| piece.state == "active")
+        .max_by_key(|(_, piece)| piece.position)
+        .map(|(index, _)| index);
+
+    if let Some(i) = maybe_min_piece_index {
+        fish[i].position -= 1;
+    }
+}
+
+//TODO move to pure function?
+//TODO switch strategy by CLI
+fn update_by_strategy(fish: &mut [Piece<'_>; 4]) -> () {
+    //move_next_active_fish(fish);
+    //move_fish_nearest_sea(fish);
+    move_fish_farthest_from_sea(fish);
+}
+
+//TODO track number of rounds per game.
 fn main() {
     let cli = Cli::parse();
     println!("fish_tiles: {:?}", cli.fish_tiles);
